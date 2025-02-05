@@ -62,6 +62,7 @@ function extractEvents(
   if (reactName === undefined) {
     return;
   }
+  // 收集事件，并对事件进行封装，以及其他兼容性的处理，这个也就是后续我们在 JSX 回调函数中可以获取到的事件
   let SyntheticEventCtor = SyntheticEvent;
   let reactEventType: string = domEventName;
   switch (domEventName) {
@@ -194,7 +195,7 @@ function extractEvents(
       // This is a breaking change that can wait until React 18.
       domEventName === 'scroll';
 
-    const listeners = accumulateSinglePhaseListeners(
+    const listeners = accumulateSinglePhaseListeners( // 收集事件处理函数
       targetInst,
       reactName,
       nativeEvent.type,
@@ -211,7 +212,7 @@ function extractEvents(
         nativeEvent,
         nativeEventTarget,
       );
-      dispatchQueue.push({event, listeners});
+      dispatchQueue.push({event, listeners}); // dispatchQueue存储的是 eventName: listenersList的结构
     }
   }
 }

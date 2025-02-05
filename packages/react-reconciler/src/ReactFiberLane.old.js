@@ -198,11 +198,11 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
 
   // Do not work on any idle work until all the non-idle work has finished,
   // even if the work is suspended.
-  const nonIdlePendingLanes = pendingLanes & NonIdleLanes;
+  const nonIdlePendingLanes = pendingLanes & NonIdleLanes; // 有没有立即更新的优先级
   if (nonIdlePendingLanes !== NoLanes) {
     const nonIdleUnblockedLanes = nonIdlePendingLanes & ~suspendedLanes;
     if (nonIdleUnblockedLanes !== NoLanes) {
-      nextLanes = getHighestPriorityLanes(nonIdleUnblockedLanes);
+      nextLanes = getHighestPriorityLanes(nonIdleUnblockedLanes); // 获取当前的最高优先级
     } else {
       const nonIdlePingedLanes = nonIdlePendingLanes & pingedLanes;
       if (nonIdlePingedLanes !== NoLanes) {
@@ -404,7 +404,7 @@ export function markStarvedLanesAsExpired(
   // it as expired to force it to finish.
   let lanes = pendingLanes;
   while (lanes > 0) {
-    const index = pickArbitraryLaneIndex(lanes);
+    const index = pickArbitraryLaneIndex(lanes); // 找到最低优先级的赛道，从左往右找
     const lane = 1 << index;
 
     const expirationTime = expirationTimes[index];
@@ -413,18 +413,18 @@ export function markStarvedLanesAsExpired(
       // if it's pinged, assume it's CPU-bound. Compute a new expiration time
       // using the current time.
       if (
-        (lane & suspendedLanes) === NoLanes ||
+        (lane & suspendedLanes) === NoLanes || // 没有待更新的
         (lane & pingedLanes) !== NoLanes
       ) {
         // Assumes timestamps are monotonically increasing.
-        expirationTimes[index] = computeExpirationTime(lane, currentTime);
+        expirationTimes[index] = computeExpirationTime(lane, currentTime); // 计算过期时间，通过优先级计算，防止饥饿
       }
-    } else if (expirationTime <= currentTime) {
+    } else if (expirationTime <= currentTime) { // 超时了就放到饥饿的lanes变量中
       // This lane expired
       root.expiredLanes |= lane;
     }
 
-    lanes &= ~lane;
+    lanes &= ~lane; // 去掉当前优先级，看下一个优先级是不是过期了
   }
 }
 
@@ -576,7 +576,7 @@ export function markRootUpdated(
   updateLane: Lane,
   eventTime: number,
 ) {
-  root.pendingLanes |= updateLane;
+  root.pendingLanes |= updateLane; // 将要更新的lane加入到pendingLanes中
 
   // If there are any suspended transitions, it's possible this new update
   // could unblock them. Clear the suspended lanes so that we can try rendering
@@ -590,7 +590,7 @@ export function markRootUpdated(
   // We don't do this if the incoming update is idle, because we never process
   // idle updates until after all the regular updates have finished; there's no
   // way it could unblock a transition.
-  if (updateLane !== IdleLane) {
+  if (updateLane !== IdleLane) { // TODO
     root.suspendedLanes = NoLanes;
     root.pingedLanes = NoLanes;
   }
@@ -599,7 +599,7 @@ export function markRootUpdated(
   const index = laneToIndex(updateLane);
   // We can always overwrite an existing timestamp because we prefer the most
   // recent event, and we assume time is monotonically increasing.
-  eventTimes[index] = eventTime;
+  eventTimes[index] = eventTime; // 更新eventTimes，表示这个赛道正在更新
 }
 
 export function markRootSuspended(root: FiberRoot, suspendedLanes: Lanes) {

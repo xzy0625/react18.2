@@ -285,31 +285,33 @@ if (__DEV__) {
   didWarnAboutDefaultPropsOnFunctionComponent = {};
 }
 
+// 协调孩子，返回新的fiber
 export function reconcileChildren(
   current: Fiber | null,
   workInProgress: Fiber,
   nextChildren: any,
   renderLanes: Lanes,
 ) {
+  // 初次渲染阶段
   if (current === null) {
     // If this is a fresh new component that hasn't been rendered yet, we
     // won't update its child set by applying minimal side-effects. Instead,
     // we will add them all to the child before it gets rendered. That means
     // we can optimize this reconciliation pass by not tracking side-effects.
-    workInProgress.child = mountChildFibers(
+    workInProgress.child = mountChildFibers( // 值得一提的是，mountChildFibers与reconcileChildFibers这两个方法的逻辑基本一致。唯一的区别是：reconcileChildFibers会为生成的Fiber节点带上effectTag属性，而mountChildFibers不会。
       workInProgress,
       null,
       nextChildren,
       renderLanes,
     );
-  } else {
+  } else { // 首次渲染只有hostTag才会走到这个逻辑。因为hostTag的stateNode指向fiberRootNode
     // If the current child is the same as the work in progress, it means that
     // we haven't yet started any work on these children. Therefore, we use
     // the clone algorithm to create a copy of all the current children.
 
     // If we had any progressed work already, that is invalid at this point so
     // let's throw it out.
-    workInProgress.child = reconcileChildFibers(
+    workInProgress.child = reconcileChildFibers( // 值得一提的是，mountChildFibers与reconcileChildFibers这两个方法的逻辑基本一致。唯一的区别是：reconcileChildFibers会为生成的Fiber节点带上effectTag属性，而mountChildFibers不会。
       workInProgress,
       current.child,
       nextChildren,
@@ -941,7 +943,7 @@ function markRef(current: Fiber | null, workInProgress: Fiber) {
     (current !== null && current.ref !== ref)
   ) {
     // Schedule a Ref effect
-    workInProgress.flags |= Ref;
+    workInProgress.flags |= Ref; // 打上ref的flag
     if (enableSuspenseLayoutEffectSemantics) {
       workInProgress.flags |= RefStatic;
     }
@@ -1016,7 +1018,7 @@ function updateFunctionComponent(
     }
     setIsRendering(false);
   } else {
-    nextChildren = renderWithHooks(
+    nextChildren = renderWithHooks( //
       current,
       workInProgress,
       Component,
@@ -1030,7 +1032,7 @@ function updateFunctionComponent(
     markComponentRenderStopped();
   }
 
-  if (current !== null && !didReceiveUpdate) {
+  if (current !== null && !didReceiveUpdate) { // 优化
     bailoutHooks(current, workInProgress, renderLanes);
     return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
   }
@@ -1285,8 +1287,8 @@ function updateHostRoot(current, workInProgress, renderLanes) {
   const nextProps = workInProgress.pendingProps;
   const prevState = workInProgress.memoizedState;
   const prevChildren = prevState.element;
-  cloneUpdateQueue(current, workInProgress);
-  processUpdateQueue(workInProgress, nextProps, null, renderLanes);
+  cloneUpdateQueue(current, workInProgress); // 更新workInProgress的updateQueue。这样子就不是引用了。更改workInProgress不会影响current
+  processUpdateQueue(workInProgress, nextProps, null, renderLanes); // 处理更新。处理完之后workInProgress.memoizedState会保存最新的elment元素
 
   const nextState: RootState = workInProgress.memoizedState;
   const root: FiberRoot = workInProgress.stateNode;
@@ -1303,7 +1305,7 @@ function updateHostRoot(current, workInProgress, renderLanes) {
 
   // Caution: React DevTools currently depends on this property
   // being called "element".
-  const nextChildren = nextState.element;
+  const nextChildren = nextState.element; // 直接从element中获取到子元素，这个element是放在memoizedState中
   if (supportsHydration && prevState.isDehydrated) {
     // This is a hydration root whose shell has not yet hydrated. We should
     // attempt to hydrate.
@@ -1396,11 +1398,11 @@ function updateHostRoot(current, workInProgress, renderLanes) {
   } else {
     // Root is not dehydrated. Either this is a client-only root, or it
     // already hydrated.
-    resetHydrationState();
-    if (nextChildren === prevChildren) {
+    resetHydrationState(); // 服务端渲染相关
+    if (nextChildren === prevChildren) { // 这里是复用？？
       return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
     }
-    reconcileChildren(current, workInProgress, nextChildren, renderLanes);
+    reconcileChildren(current, workInProgress, nextChildren, renderLanes); // 协调子孩子，返回子fiber
   }
   return workInProgress.child;
 }
@@ -1438,7 +1440,7 @@ function updateHostComponent(
   const nextProps = workInProgress.pendingProps;
   const prevProps = current !== null ? current.memoizedProps : null;
 
-  let nextChildren = nextProps.children;
+  let nextChildren = nextProps.children; // 单个孩子或者多个孩子
   const isDirectTextChild = shouldSetTextContent(type, nextProps);
 
   if (isDirectTextChild) {
@@ -1615,7 +1617,7 @@ function mountIncompleteClassComponent(
   );
 }
 
-function mountIndeterminateComponent(
+function mountIndeterminateComponent( // 判断不确定组件
   _current,
   workInProgress,
   Component,
@@ -1672,7 +1674,7 @@ function mountIndeterminateComponent(
       props,
       context,
       renderLanes,
-    );
+    ); // 从这里拿到value,后续判断是函数组件还是类组件
     hasId = checkDidRenderIdHook();
     setIsRendering(false);
   } else {
@@ -1725,9 +1727,9 @@ function mountIndeterminateComponent(
     !disableModulePatternComponents &&
     typeof value === 'object' &&
     value !== null &&
-    typeof value.render === 'function' &&
+    typeof value.render === 'function' && // 通过value.render判断是函数组件还是类组件，因为类组件中render是一个函数，而函数组件中是直接return了
     value.$$typeof === undefined
-  ) {
+  ) { // 类组件
     if (__DEV__) {
       const componentName = getComponentNameFromType(Component) || 'Unknown';
       if (!didWarnAboutModulePatternComponent[componentName]) {
@@ -1746,7 +1748,7 @@ function mountIndeterminateComponent(
     }
 
     // Proceed under the assumption that this is a class instance
-    workInProgress.tag = ClassComponent;
+    workInProgress.tag = ClassComponent; // 类组件
 
     // Throw out any hooks that were used.
     workInProgress.memoizedState = null;
@@ -1778,9 +1780,9 @@ function mountIndeterminateComponent(
       hasContext,
       renderLanes,
     );
-  } else {
+  } else { // 函数组件
     // Proceed under the assumption that this is a function component
-    workInProgress.tag = FunctionComponent;
+    workInProgress.tag = FunctionComponent; // 函数组件
     if (__DEV__) {
       if (disableLegacyContext && Component.contextTypes) {
         console.error(
@@ -1796,7 +1798,7 @@ function mountIndeterminateComponent(
       ) {
         setIsStrictModeForDevtools(true);
         try {
-          value = renderWithHooks(
+          value = renderWithHooks( // 返回孩子
             null,
             workInProgress,
             Component,
@@ -1815,7 +1817,7 @@ function mountIndeterminateComponent(
       pushMaterializedTreeId(workInProgress);
     }
 
-    reconcileChildren(null, workInProgress, value, renderLanes);
+    reconcileChildren(null, workInProgress, value, renderLanes); // 协调子孩子
     if (__DEV__) {
       validateFunctionComponentInDev(workInProgress, Component);
     }
@@ -3312,7 +3314,7 @@ function updateContextConsumer(
   }
 
   // React DevTools reads this flag.
-  workInProgress.flags |= PerformedWork;
+  workInProgress.flags |= PerformedWork; // 这里也挂载了一个奇怪的副作用
   reconcileChildren(current, workInProgress, newChildren, renderLanes);
   return workInProgress.child;
 }
@@ -3679,7 +3681,7 @@ function attemptEarlyBailoutIfNoScheduledUpdate(
       break;
     }
   }
-  return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
+  return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes); // 复用之前的fiber节点
 }
 
 function beginWork(
@@ -3705,6 +3707,7 @@ function beginWork(
     }
   }
 
+  // 更新阶段
   if (current !== null) {
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
@@ -3717,11 +3720,11 @@ function beginWork(
     ) {
       // If props or context changed, mark the fiber as having performed work.
       // This may be unset if the props are determined to be equal later (memo).
-      didReceiveUpdate = true;
+      didReceiveUpdate = true; // 满足如下情况时didReceiveUpdate === false（即可以直接复用前一次更新的子Fiber，不需要新建子Fiber）
     } else {
       // Neither props nor legacy context changes. Check if there's a pending
       // update or context change.
-      const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(
+      const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext( // 有更新或者context。引起渲染的只能是 更新 / context / props
         current,
         renderLanes,
       );
@@ -3732,7 +3735,7 @@ function beginWork(
         (workInProgress.flags & DidCapture) === NoFlags
       ) {
         // No pending updates or context. Bail out now.
-        didReceiveUpdate = false;
+        didReceiveUpdate = false; // oldProps === newProps && workInProgress.type === current.type，即props与fiber.type不变，并且优先级够的情况下可以复用
         return attemptEarlyBailoutIfNoScheduledUpdate(
           current,
           workInProgress,
@@ -3742,7 +3745,7 @@ function beginWork(
       if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
         // This is a special case that only exists for legacy mode.
         // See https://github.com/facebook/react/pull/19216.
-        didReceiveUpdate = true;
+        didReceiveUpdate = true; // 强制刷新
       } else {
         // An update was scheduled on this fiber, but there are no new props
         // nor legacy context. Set this to false. If an update queue or context
@@ -3751,7 +3754,7 @@ function beginWork(
         didReceiveUpdate = false;
       }
     }
-  } else {
+  } else { // 挂载阶段
     didReceiveUpdate = false;
 
     if (getIsHydrating() && isForkedChild(workInProgress)) {
@@ -3777,12 +3780,13 @@ function beginWork(
   // move this assignment out of the common path and into each branch.
   workInProgress.lanes = NoLanes;
 
+  // 对所有的tag进行协调，判断是不是需要更改
   switch (workInProgress.tag) {
     case IndeterminateComponent: {
       return mountIndeterminateComponent(
         current,
         workInProgress,
-        workInProgress.type,
+        workInProgress.type, // 这个type存储的就是我们函数组件的函数
         renderLanes,
       );
     }

@@ -757,7 +757,6 @@ function ChildReconciler(shouldTrackSideEffects) {
 
     // If you change this code, also update reconcileChildrenIterator() which
     // uses the same algorithm.
-
     if (__DEV__) {
       // First, validate keys.
       let knownKeys = null;

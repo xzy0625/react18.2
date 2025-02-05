@@ -21,7 +21,7 @@ if (enableCreateEventHandleAPI) {
 /**
  * Mapping from registration name to event name
  */
-export const registrationNameDependencies = {};
+export const registrationNameDependencies = {}; // 注册事件到依赖的映射
 
 /**
  * Mapping from lowercase registration names to the properly cased version,
@@ -37,7 +37,7 @@ export function registerTwoPhaseEvent(
   dependencies: Array<DOMEventName>,
 ): void {
   registerDirectEvent(registrationName, dependencies);
-  registerDirectEvent(registrationName + 'Capture', dependencies);
+  registerDirectEvent(registrationName + 'Capture', dependencies); // 注册Capture事件
 }
 
 export function registerDirectEvent(
@@ -66,6 +66,6 @@ export function registerDirectEvent(
   }
 
   for (let i = 0; i < dependencies.length; i++) {
-    allNativeEvents.add(dependencies[i]);
+    allNativeEvents.add(dependencies[i]); // 注册所有的依赖事件
   }
 }

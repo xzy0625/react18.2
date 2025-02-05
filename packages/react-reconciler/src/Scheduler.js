@@ -13,6 +13,7 @@
 // When we switch to ESM, we can delete this module.
 import * as Scheduler from 'scheduler';
 
+// 调度模块
 export const scheduleCallback = Scheduler.unstable_scheduleCallback;
 export const cancelCallback = Scheduler.unstable_cancelCallback;
 export const shouldYield = Scheduler.unstable_shouldYield;

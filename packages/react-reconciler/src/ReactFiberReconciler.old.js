@@ -319,16 +319,17 @@ export function createHydrationContainer(
 }
 
 export function updateContainer(
-  element: ReactNodeList,
-  container: OpaqueRoot,
+  element: ReactNodeList, // react jsx元素
+  container: OpaqueRoot, // fiberRoot
   parentComponent: ?React$Component<any, any>,
   callback: ?Function,
 ): Lane {
   if (__DEV__) {
     onScheduleRoot(container, element);
   }
-  const current = container.current;
-  const eventTime = requestEventTime();
+  const current = container.current; // 拿到rootFiber,前面已经初始好了updateQueue  (root.current = uninitializedFiber  / uninitializedFiber.stateNode = root)
+  const eventTime = requestEventTime(); // 这个时间会一直向下传递当作当前时间，后面判断饥饿的时候也是通过这个和过期时间判断,其实就是调用performance.now()，只不过兼容了一下
+  // 1. 计算lanes
   const lane = requestUpdateLane(current);
 
   if (enableSchedulingProfiler) {
@@ -359,6 +360,7 @@ export function updateContainer(
     }
   }
 
+  // 2. 创建一个update更新 {payload: null, next: null}
   const update = createUpdate(eventTime, lane);
   // Caution: React DevTools currently depends on this property
   // being called "element".
@@ -378,8 +380,10 @@ export function updateContainer(
     update.callback = callback;
   }
 
-  const root = enqueueUpdate(current, update, lane);
+  // 3. 更新入队 按照批次加入到 concurrentQueues 数组中 return node.stateNode，这里的root已经通过markUpdateLaneFromFiberToRoot变成根节点了
+  const root = enqueueUpdate(current, update, lane); // 返回的是fiberRootNode
   if (root !== null) {
+    // 4. 开始调度，这里会进入到workLoop
     scheduleUpdateOnFiber(root, current, lane, eventTime);
     entangleTransitions(root, current, lane);
   }

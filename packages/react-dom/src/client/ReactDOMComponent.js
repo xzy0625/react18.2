@@ -292,7 +292,7 @@ function setInitialDOMProperties(
       continue;
     }
     const nextProp = nextProps[propKey];
-    if (propKey === STYLE) {
+    if (propKey === STYLE) { // 设置style
       if (__DEV__) {
         if (nextProp) {
           // Freeze the next style object so that we can assume it won't be
@@ -302,12 +302,12 @@ function setInitialDOMProperties(
       }
       // Relies on `updateStylesByID` not mutating `styleUpdates`.
       setValueForStyles(domElement, nextProp);
-    } else if (propKey === DANGEROUSLY_SET_INNER_HTML) {
+    } else if (propKey === DANGEROUSLY_SET_INNER_HTML) { // DANGEROUSLY_SET_INNER_HTML
       const nextHtml = nextProp ? nextProp[HTML] : undefined;
       if (nextHtml != null) {
         setInnerHTML(domElement, nextHtml);
       }
-    } else if (propKey === CHILDREN) {
+    } else if (propKey === CHILDREN) { // 处理类型为字符串的孩子
       if (typeof nextProp === 'string') {
         // Avoid setting initial textContent when the text is empty. In IE11 setting
         // textContent on a <textarea> will cause the placeholder to not
@@ -318,7 +318,7 @@ function setInitialDOMProperties(
           setTextContent(domElement, nextProp);
         }
       } else if (typeof nextProp === 'number') {
-        setTextContent(domElement, '' + nextProp);
+        setTextContent(domElement, '' + nextProp); // 在这里设置文本节点
       }
     } else if (
       propKey === SUPPRESS_CONTENT_EDITABLE_WARNING ||
@@ -335,7 +335,7 @@ function setInitialDOMProperties(
         if (__DEV__ && typeof nextProp !== 'function') {
           warnForInvalidEventListener(propKey, nextProp);
         }
-        if (propKey === 'onScroll') {
+        if (propKey === 'onScroll') { // 绑定scroll
           listenToNonDelegatedEvent('scroll', domElement);
         }
       }
@@ -571,7 +571,7 @@ export function setInitialProperties(
 
   assertValidProps(tag, props);
 
-  setInitialDOMProperties(
+  setInitialDOMProperties( // 设置props children scroll事件等
     tag,
     domElement,
     rootContainerElement,

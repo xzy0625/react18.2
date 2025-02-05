@@ -7,7 +7,7 @@
  * @flow
  */
 
-export function addEventBubbleListener(
+export function addEventBubbleListener( // 冒泡
   target: EventTarget,
   eventType: string,
   listener: Function,
@@ -16,7 +16,7 @@ export function addEventBubbleListener(
   return listener;
 }
 
-export function addEventCaptureListener(
+export function addEventCaptureListener( // 捕获
   target: EventTarget,
   eventType: string,
   listener: Function,

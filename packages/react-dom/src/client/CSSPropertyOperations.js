@@ -79,7 +79,7 @@ export function setValueForStyles(node, styles) {
     if (isCustomProperty) {
       style.setProperty(styleName, styleValue);
     } else {
-      style[styleName] = styleValue;
+      style[styleName] = styleValue; // $0.style.backgroundColor = 'blue',所以要用驼峰的方式书写css
     }
   }
 }

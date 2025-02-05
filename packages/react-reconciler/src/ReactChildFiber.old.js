@@ -262,7 +262,8 @@ function resolveLazy(lazyType) {
 // to be able to optimize each path individually by branching early. This needs
 // a compiler or we can do it manually. Helpers that don't need this branching
 // live outside of this function.
-function ChildReconciler(shouldTrackSideEffects) {
+// 协调孩子节点
+function ChildReconciler(shouldTrackSideEffects) { // // mount和update的区别
   function deleteChild(returnFiber: Fiber, childToDelete: Fiber): void {
     if (!shouldTrackSideEffects) {
       // Noop.
@@ -339,7 +340,7 @@ function ChildReconciler(shouldTrackSideEffects) {
       return lastPlacedIndex;
     }
     const current = newFiber.alternate;
-    if (current !== null) {
+    if (current !== null) { // 旧节点不为null就是更新，是null就是新增
       const oldIndex = current.index;
       if (oldIndex < lastPlacedIndex) {
         // This is a move.
@@ -349,17 +350,17 @@ function ChildReconciler(shouldTrackSideEffects) {
         // This item can stay in place.
         return oldIndex;
       }
-    } else {
+    } else { // 当 React 在处理节点时，会根据节点的 flags 和其他信息来判断节点是移动还是新增：如果一个节点的 flags 包含 Placement，但是它的 current（即旧 Fiber 节点）为 null，那么说明这个节点是新增的，因为它在旧 Fiber 树中不存在。如果一个节点的 flags 包含 Placement，且它的 current 不为 null，那么说明这个节点是移动的，因为它在旧 Fiber 树中存在，但是它的位置发生了变化。
       // This is an insertion.
       newFiber.flags |= Placement;
       return lastPlacedIndex;
     }
   }
 
-  function placeSingleChild(newFiber: Fiber): Fiber {
+  function placeSingleChild(newFiber: Fiber): Fiber { // 新生成的节点没有alternate。所以要带上Placement的副作用
     // This is simpler for the single child case. We only need to do a
     // placement for inserting new children.
-    if (shouldTrackSideEffects && newFiber.alternate === null) {
+    if (shouldTrackSideEffects && newFiber.alternate === null) { // mountChildFibers与reconcileChildFibers这两个方法穿进来的。唯一的区别是：reconcileChildFibers会为生成的Fiber节点带上effectTag属性，而mountChildFibers不会。
       newFiber.flags |= Placement;
     }
     return newFiber;
@@ -758,7 +759,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     // If you change this code, also update reconcileChildrenIterator() which
     // uses the same algorithm.
 
-    if (__DEV__) {
+    if (__DEV__) { // 看有没有设置key
       // First, validate keys.
       let knownKeys = null;
       for (let i = 0; i < newChildren.length; i++) {
@@ -770,7 +771,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     let resultingFirstChild: Fiber | null = null;
     let previousNewFiber: Fiber | null = null;
 
-    let oldFiber = currentFirstChild;
+    let oldFiber = currentFirstChild; // 看下是不是更新的情况吧应该是
     let lastPlacedIndex = 0;
     let newIdx = 0;
     let nextOldFiber = null;
@@ -787,7 +788,7 @@ function ChildReconciler(shouldTrackSideEffects) {
         newChildren[newIdx],
         lanes,
       );
-      if (newFiber === null) {
+      if (newFiber === null) { // 没有匹配上，直接结束循环
         // TODO: This breaks on empty slots like null children. That's
         // unfortunate because it triggers the slow path all the time. We need
         // a better way to communicate whether this was a miss or null,
@@ -840,9 +841,9 @@ function ChildReconciler(shouldTrackSideEffects) {
         lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
         if (previousNewFiber === null) {
           // TODO: Move out of the loop. This only happens for the first run.
-          resultingFirstChild = newFiber;
+          resultingFirstChild = newFiber; // 第一个是resultingFirstChild
         } else {
-          previousNewFiber.sibling = newFiber;
+          previousNewFiber.sibling = newFiber; // 后面的都是第一个子孩子的sibling
         }
         previousNewFiber = newFiber;
       }
@@ -850,7 +851,7 @@ function ChildReconciler(shouldTrackSideEffects) {
         const numberOfForks = newIdx;
         pushTreeFork(returnFiber, numberOfForks);
       }
-      return resultingFirstChild;
+      return resultingFirstChild; // 返回第一个孩子
     }
 
     // Add all children to a key map for quick lookups.
@@ -1126,7 +1127,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     return created;
   }
 
-  function reconcileSingleElement(
+  function reconcileSingleElement( // 通过element.type来创建不同的tag的节点
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
     element: ReactElement,
@@ -1196,9 +1197,9 @@ function ChildReconciler(shouldTrackSideEffects) {
       created.return = returnFiber;
       return created;
     } else {
-      const created = createFiberFromElement(element, returnFiber.mode, lanes);
-      created.ref = coerceRef(returnFiber, currentFirstChild, element);
-      created.return = returnFiber;
+      const created = createFiberFromElement(element, returnFiber.mode, lanes); // 创建fiber
+      created.ref = coerceRef(returnFiber, currentFirstChild, element); // 创建ref
+      created.return = returnFiber; // 建立 return 连接
       return created;
     }
   }
@@ -1242,7 +1243,7 @@ function ChildReconciler(shouldTrackSideEffects) {
   // This API will tag the children with the side-effect of the reconciliation
   // itself. They will be added to the side-effect list as we pass through the
   // children and the parent.
-  function reconcileChildFibers(
+  function reconcileChildFibers( // 返回子孩子
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
     newChild: any,
@@ -1269,8 +1270,8 @@ function ChildReconciler(shouldTrackSideEffects) {
     if (typeof newChild === 'object' && newChild !== null) {
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE:
-          return placeSingleChild(
-            reconcileSingleElement(
+          return placeSingleChild( // 带上placement副作用。但是mount阶段不会带上
+            reconcileSingleElement( // 创建子节点
               returnFiber,
               currentFirstChild,
               newChild,
@@ -1298,7 +1299,7 @@ function ChildReconciler(shouldTrackSideEffects) {
           );
       }
 
-      if (isArray(newChild)) {
+      if (isArray(newChild)) { // 多个孩子的情况
         return reconcileChildrenArray(
           returnFiber,
           currentFirstChild,

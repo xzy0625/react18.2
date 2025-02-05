@@ -79,7 +79,7 @@ var taskIdCounter = 1;
 var isSchedulerPaused = false;
 
 var currentTask = null;
-var currentPriorityLevel = NormalPriority;
+var currentPriorityLevel = NormalPriority; // 当前任务的优先级，workLoop中会更改
 
 // This is set while performing work, to prevent re-entrance.
 var isPerformingWork = false;
@@ -103,6 +103,7 @@ const isInputPending =
 
 const continuousOptions = {includeContinuous: enableIsInputPendingContinuous};
 
+// 从timer中将快要过期的任务取出来放到taskQueue中去
 function advanceTimers(currentTime) {
   // Check for tasks that are no longer delayed and add them to the queue.
   let timer = peek(timerQueue);
@@ -173,6 +174,7 @@ function flushWork(hasTimeRemaining, initialTime) {
       }
     } else {
       // No catch in prod code path.
+      // 最终会调用到workLoop,这个就是schduler中的事件循环
       return workLoop(hasTimeRemaining, initialTime);
     }
   } finally {
@@ -188,7 +190,8 @@ function flushWork(hasTimeRemaining, initialTime) {
 
 function workLoop(hasTimeRemaining, initialTime) {
   let currentTime = initialTime;
-  advanceTimers(currentTime);
+  advanceTimers(currentTime); // 从timerQueue中提取过期任务到taskQueue中
+  // 通过小顶堆获取第一个最高优的任务 *** 但是并没有弹出来噢
   currentTask = peek(taskQueue);
   while (
     currentTask !== null &&
@@ -196,21 +199,29 @@ function workLoop(hasTimeRemaining, initialTime) {
   ) {
     if (
       currentTask.expirationTime > currentTime &&
-      (!hasTimeRemaining || shouldYieldToHost())
+      (!hasTimeRemaining || shouldYieldToHost()) // 判断是不是过期
     ) {
+      // 任务没有超时并且我们已经的时间分片时间已经到了
       // This currentTask hasn't expired, and we've reached the deadline.
       break;
     }
     const callback = currentTask.callback;
     if (typeof callback === 'function') {
-      currentTask.callback = null;
-      currentPriorityLevel = currentTask.priorityLevel;
-      const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
+      currentTask.callback = null; // 标记当前任务已经执行完
+      currentPriorityLevel = currentTask.priorityLevel; // 当前任务的优先级
+      const didUserCallbackTimeout = currentTask.expirationTime <= currentTime; // 回调是不是已经过期
       if (enableProfiling) {
         markTaskRun(currentTask, currentTime);
       }
-      const continuationCallback = callback(didUserCallbackTimeout);
+      // 此时，执行 callback，即 performConcurrentWorkOnRoot 方法
+      // 在执行 performConcurrentWorkOnRoot 方法的过程中，如果 reconciler 中的 workLoop 中断了
+      // 会返回 performConcurrentWorkOnRoot 自身方法，也就是 continuationCallback 会被放到当前 task 的 callback
+      // 此时 workLoop 的 while 循环中断，但是由于当前 task 并没有从队列中出来，
+      // 所以下一次执行 workLoop 时，仍然会执行本次存储的 continuationCallback
+      const continuationCallback = callback(didUserCallbackTimeout); // didUserCallbackTimeout会传递给performConcurrentWorkOnRoot作为判断是不是要分片的一个原由
       currentTime = getCurrentTime();
+      // 如果callback执行之后的返回类型是function类型就把又赋值给currentTask.callback，说明没执行完，这个逻辑在performConcurrentWorkOnRoot里面
+      // 没有执行完就不会执行pop逻辑，下一次返回的还是当前任务
       if (typeof continuationCallback === 'function') {
         currentTask.callback = continuationCallback;
         if (enableProfiling) {
@@ -222,14 +233,15 @@ function workLoop(hasTimeRemaining, initialTime) {
           currentTask.isQueued = false;
         }
         if (currentTask === peek(taskQueue)) {
-          pop(taskQueue);
+          pop(taskQueue); // 没有的话说明当前任务执行完，弹出来就行
         }
       }
       advanceTimers(currentTime);
     } else {
+      // 执行的方法不存在就应该删除
       pop(taskQueue);
     }
-    currentTask = peek(taskQueue);
+    currentTask = peek(taskQueue); // 执行完继续执行下一个任务
   }
   // Return whether there's additional work
   if (currentTask !== null) {
@@ -289,7 +301,15 @@ function unstable_next(eventHandler) {
     currentPriorityLevel = previousPriorityLevel;
   }
 }
-
+/**
+ *
+ * scheduleCallback：以一个优先级注册callback，在适当的时机执行，因为涉及过期时间的计算，所以scheduleCallback比runWithPriority的粒度更细。
+ * 1. 在scheduleCallback中优先级意味着过期时间，优先级越高priorityLevel就越小，过期时间离当前时间就越近，var expirationTime = startTime + timeout;例如IMMEDIATE_PRIORITY_TIMEOUT=-1，那var expirationTime = startTime + (-1);就小于当前时间了，所以要立即执行。
+ * 2. scheduleCallback调度的过程用到了小顶堆，所以我们可以在O(1)的复杂度找到优先级最高的task，不了解可以查阅资料，在源码中小顶堆存放着任务，每次peek都能取到离过期时间最近的task。
+ * 3. scheduleCallback中，未过期任务task存放在timerQueue中，过期任务存放在taskQueue中。
+ * 4. 新建newTask任务之后，判断newTask是否过期，没过期就加入timerQueue中，如果此时taskQueue中还没有过期任务，timerQueue中离过期时间最近的task正好是newTask，则设置个定时器，到了过期时间就加入taskQueue中。
+ * 5. 当timerQueue中有任务，就取出最早过期的任务执行。
+ */
 function unstable_wrapCallback(callback) {
   var parentPriorityLevel = currentPriorityLevel;
   return function() {
@@ -305,11 +325,12 @@ function unstable_wrapCallback(callback) {
   };
 }
 
+// 调度模块
 function unstable_scheduleCallback(priorityLevel, callback, options) {
   var currentTime = getCurrentTime();
 
-  var startTime;
-  if (typeof options === 'object' && options !== null) {
+  var startTime; // 开始时间
+  if (typeof options === 'object' && options !== null) { // 做延时用的
     var delay = options.delay;
     if (typeof delay === 'number' && delay > 0) {
       startTime = currentTime + delay;
@@ -320,8 +341,8 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     startTime = currentTime;
   }
 
-  var timeout;
-  switch (priorityLevel) {
+  var timeout; // 过期时间
+  switch (priorityLevel) { // 不同的schduler优先级对应不同的过期时间
     case ImmediatePriority:
       timeout = IMMEDIATE_PRIORITY_TIMEOUT;
       break;
@@ -340,6 +361,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
       break;
   }
 
+  // 过期时间 = 开始时间 + 延迟时间
   var expirationTime = startTime + timeout;
 
   var newTask = {
@@ -348,18 +370,21 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     priorityLevel,
     startTime,
     expirationTime,
-    sortIndex: -1,
+    sortIndex: -1, // lanes -> evnet优先级 -> timeOut -> sortIndex
   };
   if (enableProfiling) {
     newTask.isQueued = false;
   }
 
+  // 当前任务没有过期
   if (startTime > currentTime) {
     // This is a delayed task.
     newTask.sortIndex = startTime;
-    push(timerQueue, newTask);
+    push(timerQueue, newTask); // 放到timerQueue队列中
+    //taskQueue中还没有过期任务，timerQueue中离过期时间最近的task正好是newTask
     if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
       // All tasks are delayed, and this is the task with the earliest delay.
+      // 之前有低优先级任务，就暂停
       if (isHostTimeoutScheduled) {
         // Cancel an existing timeout.
         cancelHostTimeout();
@@ -367,9 +392,11 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
         isHostTimeoutScheduled = true;
       }
       // Schedule a timeout.
+      // 发起一次延时调度
       requestHostTimeout(handleTimeout, startTime - currentTime);
     }
   } else {
+    // 当前任务已经过期
     newTask.sortIndex = expirationTime;
     push(taskQueue, newTask);
     if (enableProfiling) {
@@ -380,6 +407,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     // wait until the next time we yield.
     if (!isHostCallbackScheduled && !isPerformingWork) {
       isHostCallbackScheduled = true;
+      // flushWork消费任务，会在浏览器的下一个事件循环执行。
       requestHostCallback(flushWork);
     }
   }
@@ -512,7 +540,7 @@ function forceFrameRate(fps) {
   }
 }
 
-const performWorkUntilDeadline = () => {
+const performWorkUntilDeadline = () => { // 处理过期任务
   if (scheduledHostCallback !== null) {
     const currentTime = getCurrentTime();
     // Keep track of the start time so we can measure how long the main thread
@@ -528,11 +556,13 @@ const performWorkUntilDeadline = () => {
     // `hasMoreWork` will remain true, and we'll continue the work loop.
     let hasMoreWork = true;
     try {
+      // hasMoreWork的返回值就是workLoop的返回值
       hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime);
     } finally {
       if (hasMoreWork) {
         // If there's more work, schedule the next message event at the end
         // of the preceding one.
+        // 如果因为超时造成的中断，那么这里会重新请求调度
         schedulePerformWorkUntilDeadline();
       } else {
         isMessageLoopRunning = false;

@@ -169,6 +169,7 @@ export function createFiberRoot(
     isStrictMode,
     concurrentUpdatesByDefaultOverride,
   );
+  // 设置rootFiber和fiberRoot的互相引用
   root.current = uninitializedFiber;
   uninitializedFiber.stateNode = root;
 
@@ -204,6 +205,7 @@ export function createFiberRoot(
     uninitializedFiber.memoizedState = initialState;
   }
 
+  // 初始化更新队列
   initializeUpdateQueue(uninitializedFiber);
 
   return root;

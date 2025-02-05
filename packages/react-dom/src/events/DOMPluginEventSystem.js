@@ -86,13 +86,13 @@ type DispatchEntry = {|
 export type DispatchQueue = Array<DispatchEntry>;
 
 // TODO: remove top-level side effect.
-SimpleEventPlugin.registerEvents();
-EnterLeaveEventPlugin.registerEvents();
-ChangeEventPlugin.registerEvents();
-SelectEventPlugin.registerEvents();
-BeforeInputEventPlugin.registerEvents();
+SimpleEventPlugin.registerEvents(); //  SimpleEventPlugin 处理一些常用的基础事件，详细请参见DOMEventProperties.js 中的registerSimpleEvents注册函数
+EnterLeaveEventPlugin.registerEvents(); //  鼠标移动事件
+ChangeEventPlugin.registerEvents(); //  修改事件
+SelectEventPlugin.registerEvents(); // 	处理选择事件
+BeforeInputEventPlugin.registerEvents(); //  处理控件输入前事件
 
-function extractEvents(
+function extractEvents( // 根据当前fiber调用插件系统去收集所有的事件处理函数
   dispatchQueue: DispatchQueue,
   domEventName: DOMEventName,
   targetInst: null | Fiber,
@@ -227,29 +227,29 @@ function executeDispatch(
 ): void {
   const type = event.type || 'unknown-event';
   event.currentTarget = currentTarget;
-  invokeGuardedCallbackAndCatchFirstError(type, listener, undefined, event);
+  invokeGuardedCallbackAndCatchFirstError(type, listener, undefined, event); // 会套壳很多层
   event.currentTarget = null;
 }
 
-function processDispatchQueueItemsInOrder(
+function processDispatchQueueItemsInOrder( // 事件处理函数
   event: ReactSyntheticEvent,
   dispatchListeners: Array<DispatchListener>,
   inCapturePhase: boolean,
 ): void {
   let previousInstance;
-  if (inCapturePhase) {
+  if (inCapturePhase) { // b捕获阶段从后往前，因为我们是从当前节点往上层捕获的，所有反过来遍历就好了
     for (let i = dispatchListeners.length - 1; i >= 0; i--) {
       const {instance, currentTarget, listener} = dispatchListeners[i];
       if (instance !== previousInstance && event.isPropagationStopped()) {
         return;
       }
-      executeDispatch(event, listener, currentTarget);
+      executeDispatch(event, listener, currentTarget); // 传入我们的合成事件
       previousInstance = instance;
     }
-  } else {
+  } else { // 冒泡阶段从前往后
     for (let i = 0; i < dispatchListeners.length; i++) {
       const {instance, currentTarget, listener} = dispatchListeners[i];
-      if (instance !== previousInstance && event.isPropagationStopped()) {
+      if (instance !== previousInstance && event.isPropagationStopped()) { // 判断是不是停止了冒泡
         return;
       }
       executeDispatch(event, listener, currentTarget);
@@ -263,7 +263,7 @@ export function processDispatchQueue(
   eventSystemFlags: EventSystemFlags,
 ): void {
   const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0;
-  for (let i = 0; i < dispatchQueue.length; i++) {
+  for (let i = 0; i < dispatchQueue.length; i++) { // 可能有多个事件
     const {event, listeners} = dispatchQueue[i];
     processDispatchQueueItemsInOrder(event, listeners, inCapturePhase);
     //  event system doesn't use pooling.
@@ -280,7 +280,7 @@ function dispatchEventsForPlugins(
   targetContainer: EventTarget,
 ): void {
   const nativeEventTarget = getEventTarget(nativeEvent);
-  const dispatchQueue: DispatchQueue = [];
+  const dispatchQueue: DispatchQueue = []; // 存储所有事件
   extractEvents(
     dispatchQueue,
     domEventName,
@@ -289,11 +289,11 @@ function dispatchEventsForPlugins(
     nativeEventTarget,
     eventSystemFlags,
     targetContainer,
-  );
-  processDispatchQueue(dispatchQueue, eventSystemFlags);
+  ); // 根据当前fiber去收集事件 & 处理函数
+  processDispatchQueue(dispatchQueue, eventSystemFlags); // 收集完之后就开始处理
 }
 
-export function listenToNonDelegatedEvent(
+export function listenToNonDelegatedEvent( // 不能进行事件委托的事件的绑定
   domEventName: DOMEventName,
   targetElement: Element,
 ): void {
@@ -323,9 +323,9 @@ export function listenToNonDelegatedEvent(
   }
 }
 
-export function listenToNativeEvent(
+export function listenToNativeEvent( // 可以进行事件委托的事件的绑定
   domEventName: DOMEventName,
-  isCapturePhaseListener: boolean,
+  isCapturePhaseListener: boolean, // 是否是捕获阶段执行
   target: EventTarget,
 ): void {
   if (__DEV__) {
@@ -338,11 +338,11 @@ export function listenToNativeEvent(
     }
   }
 
-  let eventSystemFlags = 0;
+  let eventSystemFlags = 0; // 事件系统标识，可以用来标记是不是捕获啥的。已经是不是需要继续向上冒泡之类的
   if (isCapturePhaseListener) {
-    eventSystemFlags |= IS_CAPTURE_PHASE;
+    eventSystemFlags |= IS_CAPTURE_PHASE; // 是捕获阶段就加上对应的值，可以同时支持冒泡和捕获
   }
-  addTrappedEventListener(
+  addTrappedEventListener( // 绑定
     target,
     domEventName,
     eventSystemFlags,
@@ -383,17 +383,17 @@ const listeningMarker =
     .toString(36)
     .slice(2);
 
-export function listenToAllSupportedEvents(rootContainerElement: EventTarget) {
-  if (!(rootContainerElement: any)[listeningMarker]) {
+export function listenToAllSupportedEvents(rootContainerElement: EventTarget) { // 传进来需要绑定的dom对象
+  if (!(rootContainerElement: any)[listeningMarker]) { // 没有就绑定
     (rootContainerElement: any)[listeningMarker] = true;
-    allNativeEvents.forEach(domEventName => {
+    allNativeEvents.forEach(domEventName => { // 插件系统注册后的所有native事件。SimpleEventPlugin.registerEvents
       // We handle selectionchange separately because it
       // doesn't bubble and needs to be on the document.
       if (domEventName !== 'selectionchange') {
-        if (!nonDelegatedEvents.has(domEventName)) {
-          listenToNativeEvent(domEventName, false, rootContainerElement);
+        if (!nonDelegatedEvents.has(domEventName)) { // 排除不能冒泡的事件
+          listenToNativeEvent(domEventName, false, rootContainerElement); // 绑定冒泡
         }
-        listenToNativeEvent(domEventName, true, rootContainerElement);
+        listenToNativeEvent(domEventName, true, rootContainerElement); // 绑定捕获
       }
     });
     const ownerDocument =
@@ -418,11 +418,11 @@ function addTrappedEventListener(
   isCapturePhaseListener: boolean,
   isDeferredListenerForLegacyFBSupport?: boolean,
 ) {
-  let listener = createEventListenerWrapperWithPriority(
+  let listener = createEventListenerWrapperWithPriority( // 获取事件处理函数
     targetContainer,
     domEventName,
     eventSystemFlags,
-  );
+  ); // 获取事件处理函数的优先级
   // If passive option is not supported, then the event will be
   // active and not passive.
   let isPassiveListener = undefined;
@@ -445,9 +445,9 @@ function addTrappedEventListener(
   targetContainer =
     enableLegacyFBSupport && isDeferredListenerForLegacyFBSupport
       ? (targetContainer: any).ownerDocument
-      : targetContainer;
+      : targetContainer; // 绑定的对象
 
-  let unsubscribeListener;
+  let unsubscribeListener; // 取消监听函数
   // When legacyFBSupport is enabled, it's for when we
   // want to add a one time event listener to a container.
   // This should only be used with enableLegacyFBSupport
@@ -472,8 +472,8 @@ function addTrappedEventListener(
     };
   }
   // TODO: There are too many combinations here. Consolidate them.
-  if (isCapturePhaseListener) {
-    if (isPassiveListener !== undefined) {
+  if (isCapturePhaseListener) { // 捕获阶段
+    if (isPassiveListener !== undefined) { // 是否是被动监听
       unsubscribeListener = addEventCaptureListenerWithPassiveFlag(
         targetContainer,
         domEventName,
@@ -583,7 +583,7 @@ export function dispatchEventForPluginEventSystem(
           return;
         }
         const nodeTag = node.tag;
-        if (nodeTag === HostRoot || nodeTag === HostPortal) {
+        if (nodeTag === HostRoot || nodeTag === HostPortal) { // 一直找到hostRoot根结点
           let container = node.stateNode.containerInfo;
           if (isMatchingRootContainer(container, targetContainerNode)) {
             break;
@@ -656,7 +656,7 @@ function createDispatchListener(
   };
 }
 
-export function accumulateSinglePhaseListeners(
+export function accumulateSinglePhaseListeners( // 收集事件的处理函数比较清晰，概括来说就是从 targetFiber 开始向上搜索，拿事件的名称去匹配每个 Fiber 的 Props。拿此次的例子举例，此次的事件名称为 click，则计算出 reactEventName 为 onClick（如果是捕获阶段的话为 onClickCapture），img 的 Fiber 存在如下 props { onClick: () => console.log('click image') }，即此次匹配成功，会将收集到的事件和事件处理函数存储队列中
   targetFiber: Fiber | null,
   reactName: string | null,
   nativeEventType: string,
@@ -674,7 +674,7 @@ export function accumulateSinglePhaseListeners(
   // Accumulate all instances and listeners via the target -> root path.
   while (instance !== null) {
     const {stateNode, tag} = instance;
-    // Handle listeners that are on HostComponents (i.e. <div>)
+    // Handle listeners that are on HostComponents (i.e. <div>) // Fiber 类型必须是 HostComponent，例如 div，img
     if (tag === HostComponent && stateNode !== null) {
       lastHostComponent = stateNode;
 
@@ -701,7 +701,7 @@ export function accumulateSinglePhaseListeners(
         }
       }
 
-      // Standard React on* listeners, i.e. onClick or onClickCapture
+      // Standard React on* listeners, i.e. onClick or onClickCapture // 通过 reactEventName 去匹配该 Fiber 的 props，匹配成功后，即可获得事件的执行函数
       if (reactEventName !== null) {
         const listener = getListener(instance, reactEventName);
         if (listener != null) {

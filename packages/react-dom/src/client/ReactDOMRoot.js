@@ -89,9 +89,11 @@ function ReactDOMRoot(internalRoot: FiberRoot) {
   this._internalRoot = internalRoot;
 }
 
+//  这里会在原型上添加render函数
 ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render = function(
-  children: ReactNodeList,
+  children: ReactNodeList, // render函数里面传进来的组件
 ): void {
+  // 拿到fiber
   const root = this._internalRoot;
   if (root === null) {
     throw new Error('Cannot update an unmounted root.');
@@ -115,7 +117,7 @@ ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render = functio
       );
     }
 
-    const container = root.containerInfo;
+    const container = root.containerInfo; // 传进来的dom节点
 
     if (container.nodeType !== COMMENT_NODE) {
       const hostInstance = findHostInstanceWithNoPortals(root.current);
@@ -131,9 +133,12 @@ ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render = functio
       }
     }
   }
+  // 最终会调用updateContainer
+  // 创建更新 加入到更新队列 然后从根节点开始调度，这个函数会进入到react 的协调阶段
   updateContainer(children, root, null, null);
 };
 
+// 原型上的挂载函数，可以进行组件的挂载
 ReactDOMHydrationRoot.prototype.unmount = ReactDOMRoot.prototype.unmount = function(): void {
   if (__DEV__) {
     if (typeof arguments[0] === 'function') {
@@ -164,9 +169,10 @@ ReactDOMHydrationRoot.prototype.unmount = ReactDOMRoot.prototype.unmount = funct
 };
 
 export function createRoot(
-  container: Element | Document | DocumentFragment,
+  container: Element | Document | DocumentFragment, // 传进来的一个dom节点
   options?: CreateRootOptions,
 ): RootType {
+  // 判断是不是符合条件的dom节点
   if (!isValidContainer(container)) {
     throw new Error('createRoot(...): Target container is not a DOM element.');
   }
@@ -201,6 +207,7 @@ export function createRoot(
         }
       }
     }
+    // 是不是严格模式
     if (options.unstable_strictMode === true) {
       isStrictMode = true;
     }
@@ -221,6 +228,11 @@ export function createRoot(
     }
   }
 
+   // 1. 创建root容器 createFiberRoot
+  // 模式是不一样的 fiber上的mode属性
+  // containerInfo:{div#root}
+  // rootFiber.stateNode = fiberRoot
+  // fiberRoot.current = rootFiber
   const root = createContainer(
     container,
     ConcurrentRoot,
@@ -231,14 +243,21 @@ export function createRoot(
     onRecoverableError,
     transitionCallbacks,
   );
-  markContainerAsRoot(root.current, container);
+   // 2. container[internalContainerInstanceKey] = hostRoot; 所以：root.containerInfo[internalContainerInstanceKey] === root.current
+  markContainerAsRoot(root.current, container); // 为了实现dom和fiber互相指向
 
+  // 获取当前的dom作为事件的绑定
   const rootContainerElement: Document | Element | DocumentFragment =
     container.nodeType === COMMENT_NODE
       ? (container.parentNode: any)
       : container;
-  listenToAllSupportedEvents(rootContainerElement);
+  // 3. 事件系统
+  listenToAllSupportedEvents(rootContainerElement); // https://juejin.cn/post/7231178578997919804
 
+  // 4. 返回react的根，是一个ReactDOMRoot实例
+  // this._internalRoot = internalRoot;
+  // ReactDOMRoot.prototype.render = function(children) {}
+  // 返回这个实例，这个实例上有render函数，所以使用的时候直接调用就好了
   return new ReactDOMRoot(root);
 }
 

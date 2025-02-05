@@ -254,7 +254,7 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
     // node that we're free to reuse. This is lazily created to avoid allocating
     // extra objects for things that are never updated. It also allow us to
     // reclaim the extra memory if needed.
-    workInProgress = createFiber(
+    workInProgress = createFiber( // 创建一颗新的fiber树
       current.tag,
       pendingProps,
       current.key,
@@ -273,7 +273,7 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
     }
 
     workInProgress.alternate = current;
-    current.alternate = workInProgress;
+    current.alternate = workInProgress; // 建立两棵树的相互引用。后面从hostRoot开始遍历的时候alternate就有值
   } else {
     workInProgress.pendingProps = pendingProps;
     // Needed because Blocks store data on type.
@@ -462,7 +462,7 @@ export function createHostRootFiber(
     mode |= ProfileMode;
   }
 
-  return createFiber(HostRoot, null, null, mode);
+  return createFiber(HostRoot, null, null, mode); // 创建hostRoot
 }
 
 export function createFiberFromTypeAndProps(
@@ -473,12 +473,12 @@ export function createFiberFromTypeAndProps(
   mode: TypeOfMode,
   lanes: Lanes,
 ): Fiber {
-  let fiberTag = IndeterminateComponent;
+  let fiberTag = IndeterminateComponent; // 我们现在还不知道最终的类型，只能先设置为这个了
   // The resolved type is set if we know what the final type will be. I.e. it's not lazy.
   let resolvedType = type;
   if (typeof type === 'function') {
     if (shouldConstruct(type)) {
-      fiberTag = ClassComponent;
+      fiberTag = ClassComponent; // 类组件
       if (__DEV__) {
         resolvedType = resolveClassForHotReloading(resolvedType);
       }
@@ -488,7 +488,7 @@ export function createFiberFromTypeAndProps(
       }
     }
   } else if (typeof type === 'string') {
-    fiberTag = HostComponent;
+    fiberTag = HostComponent; // 原生host组件
   } else {
     getTag: switch (type) {
       case REACT_FRAGMENT_TYPE:
@@ -589,7 +589,7 @@ export function createFiberFromTypeAndProps(
     }
   }
 
-  const fiber = createFiber(fiberTag, pendingProps, key, mode);
+  const fiber = createFiber(fiberTag, pendingProps, key, mode); // fiberTag这个tag是我们根据type来生成的。后续子节点的处理都是通过tag来区分的
   fiber.elementType = type;
   fiber.type = resolvedType;
   fiber.lanes = lanes;
@@ -612,8 +612,8 @@ export function createFiberFromElement(
   }
   const type = element.type;
   const key = element.key;
-  const pendingProps = element.props;
-  const fiber = createFiberFromTypeAndProps(
+  const pendingProps = element.props; // 要更新的props
+  const fiber = createFiberFromTypeAndProps( // 生成节点
     type,
     key,
     pendingProps,
@@ -621,7 +621,7 @@ export function createFiberFromElement(
     mode,
     lanes,
   );
-  if (__DEV__) {
+  if (__DEV__) { // 加上调试信息，其实是babel生成的
     fiber._debugSource = element._source;
     fiber._debugOwner = element._owner;
   }

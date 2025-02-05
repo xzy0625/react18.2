@@ -208,7 +208,7 @@ let appendAllChildren;
 let updateHostContainer;
 let updateHostComponent;
 let updateHostText;
-if (supportsMutation) {
+if (supportsMutation) { // TODO Mutation mode是个啥
   // Mutation mode
 
   appendAllChildren = function(
@@ -283,7 +283,7 @@ if (supportsMutation) {
       currentHostContext,
     );
     // TODO: Type this specific to this type of component.
-    workInProgress.updateQueue = (updatePayload: any);
+    workInProgress.updateQueue = (updatePayload: any); // 这里是干嘛？？？需要关注下 updatePayload的逻辑
     // If the update payload indicates that there is a change or if there
     // is a new ref we mark this as an update. All the work is done in commitWork.
     if (updatePayload) {
@@ -639,10 +639,10 @@ function cutOffTailIfNeeded(
   }
 }
 
-function bubbleProperties(completedWork: Fiber) {
+function bubbleProperties(completedWork: Fiber) { // 在这个函数中，会收集当前节点下所有子节点的副作用以及优先级。最终将收集到的数据赋值给当前节点对应的属性，这个过程被叫做属性的冒泡.
   const didBailout =
     completedWork.alternate !== null &&
-    completedWork.alternate.child === completedWork.child;
+    completedWork.alternate.child === completedWork.child; // 为什么要进行冒泡（bubbleProperties）1、React 18 的 suspense 的功能需要。 2、能够通过任意 Fiber 都可以知道该 Fiber 的子树是否需要执行副作用。
 
   let newChildLanes = NoLanes;
   let subtreeFlags = NoFlags;
@@ -850,7 +850,7 @@ function completeWork(
   current: Fiber | null,
   workInProgress: Fiber,
   renderLanes: Lanes,
-): Fiber | null {
+): Fiber | null { //  完成任务
   const newProps = workInProgress.pendingProps;
   // Note: This intentionally doesn't check if we're hydrating because comparing
   // to the current tree provider fiber is just as fast and less error-prone.
@@ -868,7 +868,7 @@ function completeWork(
     case Profiler:
     case ContextConsumer:
     case MemoComponent:
-      bubbleProperties(workInProgress);
+      bubbleProperties(workInProgress); // 冒泡lanes和flags
       return null;
     case ClassComponent: {
       const Component = workInProgress.type;
@@ -960,7 +960,7 @@ function completeWork(
       popHostContext(workInProgress);
       const rootContainerInstance = getRootHostContainer();
       const type = workInProgress.type;
-      if (current !== null && workInProgress.stateNode != null) {
+      if (current !== null && workInProgress.stateNode != null) { // update阶段并且有stateNode
         updateHostComponent(
           current,
           workInProgress,
@@ -1007,7 +1007,7 @@ function completeWork(
             markUpdate(workInProgress);
           }
         } else {
-          const instance = createInstance(
+          const instance = createInstance( // 创建实例
             type,
             newProps,
             rootContainerInstance,
@@ -1015,15 +1015,15 @@ function completeWork(
             workInProgress,
           );
 
-          appendAllChildren(instance, workInProgress, false, false);
+          appendAllChildren(instance, workInProgress, false, false); // 挂载子元素到自己身上
 
-          workInProgress.stateNode = instance;
+          workInProgress.stateNode = instance; // fiber和dom建立连接
 
           // Certain renderers require commit-time effects for initial mount.
           // (eg DOM renderer supports auto-focus for certain elements).
           // Make sure such renderers get scheduled for later work.
           if (
-            finalizeInitialChildren(
+            finalizeInitialChildren( // 处理props，字符串children和其他不能冒泡的事件
               instance,
               type,
               newProps,
@@ -1037,10 +1037,10 @@ function completeWork(
 
         if (workInProgress.ref !== null) {
           // If there is a ref on a host node we need to schedule a callback
-          markRef(workInProgress);
+          markRef(workInProgress); // 这里处理ref
         }
       }
-      bubbleProperties(workInProgress);
+      bubbleProperties(workInProgress); // labes冒泡，主要是处理subLanes
       return null;
     }
     case HostText: {

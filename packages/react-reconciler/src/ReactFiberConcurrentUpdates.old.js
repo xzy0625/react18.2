@@ -34,14 +34,14 @@ let concurrentQueues: Array<
 export function pushConcurrentUpdateQueue(
   queue: HookQueue<any, any> | ClassQueue<any>,
 ) {
-  if (concurrentQueues === null) {
+  if (concurrentQueues === null) { // concurrentQueues存的只是updateQueue中share的一个指针，这里面的queue更改。fiber上 updateQueue中share也会对应更改
     concurrentQueues = [queue];
   } else {
     concurrentQueues.push(queue);
   }
 }
 
-export function finishQueueingConcurrentUpdates() {
+export function finishQueueingConcurrentUpdates() { // 合并interleaved和pending。为啥要搞这个
   // Transfer the interleaved updates onto the main queue. Each queue has a
   // `pending` field and an `interleaved` field. When they are not null, they
   // point to the last node in a circular linked list. We need to append the
@@ -53,7 +53,7 @@ export function finishQueueingConcurrentUpdates() {
       const lastInterleavedUpdate = queue.interleaved;
       if (lastInterleavedUpdate !== null) {
         queue.interleaved = null;
-        const firstInterleavedUpdate = lastInterleavedUpdate.next;
+        const firstInterleavedUpdate = lastInterleavedUpdate.next; // 把暂存的update更新到将要更新的pending上去，先切开，然后组成环形链表
         const lastPendingUpdate = queue.pending;
         if (lastPendingUpdate !== null) {
           const firstPendingUpdate = lastPendingUpdate.next;
@@ -110,9 +110,9 @@ export function enqueueConcurrentHookUpdateAndEagerlyBailout<S, A>(
 }
 
 export function enqueueConcurrentClassUpdate<State>(
-  fiber: Fiber,
-  queue: ClassQueue<State>,
-  update: ClassUpdate<State>,
+  fiber: Fiber, // fiebr
+  queue: ClassQueue<State>, // sharing
+  update: ClassUpdate<State>, // 当前更新
   lane: Lane,
 ) {
   const interleaved = queue.interleaved;
@@ -126,9 +126,10 @@ export function enqueueConcurrentClassUpdate<State>(
     update.next = interleaved.next;
     interleaved.next = update;
   }
-  queue.interleaved = update;
+  queue.interleaved = update; // 构成一个环形链表
 
-  return markUpdateLaneFromFiberToRoot(fiber, lane);
+  // 一直向上找到根节点
+  return markUpdateLaneFromFiberToRoot(fiber, lane); // 返回的是根节点的stateNode，也就是fiberRoot。所以我们调度是从根节点fiberRoot开始调度的
 }
 
 export function enqueueConcurrentRenderForLane(fiber: Fiber, lane: Lane) {
@@ -139,7 +140,7 @@ export function enqueueConcurrentRenderForLane(fiber: Fiber, lane: Lane) {
 // compatibility and should always be accompanied by a warning.
 export const unsafe_markUpdateLaneFromFiberToRoot = markUpdateLaneFromFiberToRoot;
 
-function markUpdateLaneFromFiberToRoot(
+function markUpdateLaneFromFiberToRoot( // 更新现在这个fiber的优先级，并且找到我们的FiberRootNode，所有的更新都是从FiberRootNode开始的
   sourceFiber: Fiber,
   lane: Lane,
 ): FiberRoot | null {
@@ -161,7 +162,7 @@ function markUpdateLaneFromFiberToRoot(
   let node = sourceFiber;
   let parent = sourceFiber.return;
   while (parent !== null) {
-    parent.childLanes = mergeLanes(parent.childLanes, lane);
+    parent.childLanes = mergeLanes(parent.childLanes, lane); // 将孩子的更新合并到父亲上
     alternate = parent.alternate;
     if (alternate !== null) {
       alternate.childLanes = mergeLanes(alternate.childLanes, lane);
@@ -176,7 +177,7 @@ function markUpdateLaneFromFiberToRoot(
     parent = parent.return;
   }
   if (node.tag === HostRoot) {
-    const root: FiberRoot = node.stateNode;
+    const root: FiberRoot = node.stateNode; // 找到fiberRootNode
     return root;
   } else {
     return null;

@@ -46,6 +46,7 @@ module.exports = {
     'keyword-spacing': [ERROR, {after: true, before: true}],
     'no-bitwise': OFF,
     'no-console': OFF,
+    'no-debugger': OFF,
     'no-inner-declarations': [ERROR, 'functions'],
     'no-multi-spaces': ERROR,
     'no-restricted-globals': [ERROR].concat(restrictedGlobals),

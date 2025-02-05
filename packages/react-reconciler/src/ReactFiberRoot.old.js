@@ -56,7 +56,7 @@ function FiberRootNode(
   identifierPrefix,
   onRecoverableError,
 ) {
-  this.tag = tag;
+  this.tag = tag; // 同步模式还是并发模式
   this.containerInfo = containerInfo;
   this.pendingChildren = null;
   this.current = null;
@@ -67,10 +67,10 @@ function FiberRootNode(
   this.pendingContext = null;
   this.callbackNode = null;
   this.callbackPriority = NoLane;
-  this.eventTimes = createLaneMap(NoLanes);
-  this.expirationTimes = createLaneMap(NoTimestamp);
+  this.eventTimes = createLaneMap(NoLanes); // TODO
+  this.expirationTimes = createLaneMap(NoTimestamp); // TODO
 
-  this.pendingLanes = NoLanes;
+  this.pendingLanes = NoLanes; // TODO
   this.suspendedLanes = NoLanes;
   this.pingedLanes = NoLanes;
   this.expiredLanes = NoLanes;
@@ -111,7 +111,7 @@ function FiberRootNode(
 
   if (enableUpdaterTracking) {
     this.memoizedUpdaters = new Set();
-    const pendingUpdatersLaneMap = (this.pendingUpdatersLaneMap = []);
+    const pendingUpdatersLaneMap = (this.pendingUpdatersLaneMap = []); // TODO
     for (let i = 0; i < TotalLanes; i++) {
       pendingUpdatersLaneMap.push(new Set());
     }
@@ -167,7 +167,7 @@ export function createFiberRoot(
     isStrictMode,
     concurrentUpdatesByDefaultOverride,
   );
-  root.current = uninitializedFiber;
+  root.current = uninitializedFiber; // rootFiber和fiberRoot互相指向
   uninitializedFiber.stateNode = root;
 
   if (enableCache) {
@@ -202,7 +202,7 @@ export function createFiberRoot(
     uninitializedFiber.memoizedState = initialState;
   }
 
-  initializeUpdateQueue(uninitializedFiber);
+  initializeUpdateQueue(uninitializedFiber); // 初始化updateQueue
 
   return root;
 }

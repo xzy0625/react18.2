@@ -83,12 +83,12 @@ export function createEventListenerWrapper(
   );
 }
 
-export function createEventListenerWrapperWithPriority(
+export function createEventListenerWrapperWithPriority( // 通过不同的优先级处理函数来包裹我们的事件处理函数
   targetContainer: EventTarget,
   domEventName: DOMEventName,
   eventSystemFlags: EventSystemFlags,
 ): Function {
-  const eventPriority = getEventPriority(domEventName);
+  const eventPriority = getEventPriority(domEventName); // 通过事件名获取事件的优先级
   let listenerWrapper;
   switch (eventPriority) {
     case DiscreteEventPriority:
@@ -116,12 +116,12 @@ function dispatchDiscreteEvent(
   container,
   nativeEvent,
 ) {
-  const previousPriority = getCurrentUpdatePriority();
+  const previousPriority = getCurrentUpdatePriority(); // 优先级
   const prevTransition = ReactCurrentBatchConfig.transition;
   ReactCurrentBatchConfig.transition = null;
   try {
     setCurrentUpdatePriority(DiscreteEventPriority);
-    dispatchEvent(domEventName, eventSystemFlags, container, nativeEvent);
+    dispatchEvent(domEventName, eventSystemFlags, container, nativeEvent); // 派发事件
   } finally {
     setCurrentUpdatePriority(previousPriority);
     ReactCurrentBatchConfig.transition = prevTransition;
@@ -150,7 +150,7 @@ export function dispatchEvent(
   domEventName: DOMEventName,
   eventSystemFlags: EventSystemFlags,
   targetContainer: EventTarget,
-  nativeEvent: AnyNativeEvent,
+  nativeEvent: AnyNativeEvent, // 原生的事件对象
 ): void {
   if (!_enabled) {
     return;
@@ -172,7 +172,7 @@ export function dispatchEvent(
   }
 }
 
-function dispatchEventOriginal(
+function dispatchEventOriginal( // 派发事件
   domEventName: DOMEventName,
   eventSystemFlags: EventSystemFlags,
   targetContainer: EventTarget,
@@ -268,14 +268,14 @@ function dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEve
   targetContainer: EventTarget,
   nativeEvent: AnyNativeEvent,
 ) {
-  let blockedOn = findInstanceBlockingEvent(
+  let blockedOn = findInstanceBlockingEvent( // 找到 event.target 所对应的 Fiber
     domEventName,
     eventSystemFlags,
     targetContainer,
     nativeEvent,
   );
   if (blockedOn === null) {
-    dispatchEventForPluginEventSystem(
+    dispatchEventForPluginEventSystem( // // 执行依赖收集函数
       domEventName,
       eventSystemFlags,
       nativeEvent,
@@ -352,7 +352,7 @@ export let return_targetInst = null;
 
 // Returns a SuspenseInstance or Container if it's blocked.
 // The return_targetInst field above is conceptually part of the return value.
-export function findInstanceBlockingEvent(
+export function findInstanceBlockingEvent( // 找到阻塞冒泡的实例
   domEventName: DOMEventName,
   eventSystemFlags: EventSystemFlags,
   targetContainer: EventTarget,
@@ -363,7 +363,7 @@ export function findInstanceBlockingEvent(
   return_targetInst = null;
 
   const nativeEventTarget = getEventTarget(nativeEvent);
-  let targetInst = getClosestInstanceFromNode(nativeEventTarget);
+  let targetInst = getClosestInstanceFromNode(nativeEventTarget); // 找到最近的dom
 
   if (targetInst !== null) {
     const nearestMounted = getNearestMountedFiber(targetInst);
@@ -407,7 +407,7 @@ export function findInstanceBlockingEvent(
   return null;
 }
 
-export function getEventPriority(domEventName: DOMEventName): * {
+export function getEventPriority(domEventName: DOMEventName): * { // 获取事件的优先级
   switch (domEventName) {
     // Used by SimpleEventPlugin:
     case 'cancel':

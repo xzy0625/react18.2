@@ -152,6 +152,7 @@ function createRoot(
   options?: CreateRootOptions,
 ): RootType {
   if (__DEV__) {
+    // 判读是不是通过clinet的方式引入，18推荐 import React from "react-dom/client"的引入方式
     if (!Internals.usingClientEntryPoint && !__UMD__) {
       console.error(
         'You are importing createRoot from "react-dom" which is not supported. ' +

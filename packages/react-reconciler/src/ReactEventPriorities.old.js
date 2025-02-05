@@ -21,7 +21,7 @@ import {
 
 export opaque type EventPriority = Lane;
 
-export const DiscreteEventPriority: EventPriority = SyncLane;
+export const DiscreteEventPriority: EventPriority = SyncLane; // 事件优先级的分类
 export const ContinuousEventPriority: EventPriority = InputContinuousLane;
 export const DefaultEventPriority: EventPriority = DefaultLane;
 export const IdleEventPriority: EventPriority = IdleLane;
@@ -67,7 +67,7 @@ export function isHigherEventPriority(
   return a !== 0 && a < b;
 }
 
-export function lanesToEventPriority(lanes: Lanes): EventPriority {
+export function lanesToEventPriority(lanes: Lanes): EventPriority { // lanes到事件优先级的转换
   const lane = getHighestPriorityLane(lanes);
   if (!isHigherEventPriority(DiscreteEventPriority, lane)) {
     return DiscreteEventPriority;

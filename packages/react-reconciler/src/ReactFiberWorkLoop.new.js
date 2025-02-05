@@ -261,6 +261,13 @@ const {
 
 type ExecutionContext = number;
 
+// 执行上下文
+/**
+ * 在 render 过程中, 每一个阶段都会改变executionContext(render 之前, 会设置executionContext |= RenderContext;
+ * commit 之前, 会设置executionContext |= CommitContext),
+ * 假设在render过程中再次发起更新(如在UNSAFE_componentWillReceiveProps生命周期中调用setState)
+ * 则可通过executionContext来判断当前的render状态.
+ */
 export const NoContext = /*             */ 0b000;
 const BatchedContext = /*               */ 0b001;
 const RenderContext = /*                */ 0b010;
@@ -2186,7 +2193,7 @@ function commitRootImpl(
     if (enableSchedulingProfiler) {
       markLayoutEffectsStarted(lanes);
     }
-    commitLayoutEffects(finishedWork, root, lanes);
+    commitLayoutEffects(finishedWork, root, lanes); // 在这里调用cimmitMount
     if (__DEV__) {
       if (enableDebugTracing) {
         logLayoutEffectsStopped();

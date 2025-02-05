@@ -267,14 +267,14 @@ export function createInstance(
   } else {
     parentNamespace = ((hostContext: any): HostContextProd);
   }
-  const domElement: Instance = createElement(
+  const domElement: Instance = createElement( // 创建
     type,
     props,
     rootContainerInstance,
     parentNamespace,
   );
-  precacheFiberNode(internalInstanceHandle, domElement);
-  updateFiberProps(domElement, props);
+  precacheFiberNode(internalInstanceHandle, domElement); // dom和fiber做关联
+  updateFiberProps(domElement, props); // 更新属性
   return domElement;
 }
 
@@ -292,7 +292,7 @@ export function finalizeInitialChildren(
   rootContainerInstance: Container,
   hostContext: HostContext,
 ): boolean {
-  setInitialProperties(domElement, type, props, rootContainerInstance);
+  setInitialProperties(domElement, type, props, rootContainerInstance); // 绑定不能进行事件委托的事件
   switch (type) {
     case 'button':
     case 'input':
@@ -490,7 +490,7 @@ export function appendChildToContainer(
     parentNode.insertBefore(child, container);
   } else {
     parentNode = container;
-    parentNode.appendChild(child);
+    parentNode.appendChild(child); // 添加节点
   }
   // This container might be used for a portal.
   // If something inside a portal is clicked, that click should bubble
