@@ -192,14 +192,14 @@ function attachPingListener(root: FiberRoot, wakeable: Wakeable, lanes: Lanes) {
   if (!threadIDs.has(lanes)) {
     // Memoize using the thread ID to prevent redundant listeners.
     threadIDs.add(lanes);
-    const ping = pingSuspendedRoot.bind(null, root, wakeable, lanes);
+    const ping = pingSuspendedRoot.bind(null, root, wakeable, lanes); // 会调用ensureRootIsScheduled发起新的调度。
     if (enableUpdaterTracking) {
       if (isDevToolsPresent) {
         // If we have pending work still, restore the original updaters
         restorePendingUpdaters(root, lanes);
       }
     }
-    wakeable.then(ping, ping);
+    wakeable.then(ping, ping); // 将调度放在promise.then里面执行
   }
 }
 
@@ -323,7 +323,7 @@ function markSuspenseBoundaryShouldCapture(
       // boundary with ShouldCapture and enter the unwind phase.
       suspenseBoundary.flags |= ShouldCapture;
     } else {
-      suspenseBoundary.flags |= DidCapture;
+      suspenseBoundary.flags |= DidCapture; // 标记成捕获，会渲染fallback
       sourceFiber.flags |= ForceUpdateForLegacySuspense;
 
       // We're going to commit this fiber even though it didn't complete.
@@ -419,7 +419,7 @@ function throwException(
     }
   }
 
-  if (
+  if ( // suspense组件，会返回一个promise
     value !== null &&
     typeof value === 'object' &&
     typeof value.then === 'function'
@@ -444,10 +444,10 @@ function throwException(
     }
 
     // Schedule the nearest Suspense to re-render the timed out view.
-    const suspenseBoundary = getNearestSuspenseBoundaryToCapture(returnFiber);
+    const suspenseBoundary = getNearestSuspenseBoundaryToCapture(returnFiber); // 找到最近的suspense组件。
     if (suspenseBoundary !== null) {
       suspenseBoundary.flags &= ~ForceClientRender;
-      markSuspenseBoundaryShouldCapture(
+      markSuspenseBoundaryShouldCapture( // 打上ShouldCapture标记
         suspenseBoundary,
         returnFiber,
         sourceFiber,

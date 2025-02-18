@@ -2032,8 +2032,8 @@ function startTransition(setPending, callback, options) {
   }
 
   try {
-    setPending(false);
-    callback();
+    setPending(false); // 这个地方的set发起的调度已经变成最低优先级了
+    callback(); // 这里已经发起调度任务了。这里面的调度也是最低优先级。所以会和上面的setPending在同一个批次处理。保证callback执行完。pending也为false
   } finally {
     setCurrentUpdatePriority(previousPriority);
 

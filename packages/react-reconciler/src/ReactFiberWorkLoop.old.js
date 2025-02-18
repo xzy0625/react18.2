@@ -478,7 +478,7 @@ export function requestUpdateLane(fiber: Fiber): Lane { // 获取更新优先级
     return pickArbitraryLane(workInProgressRootRenderLanes);
   }
 
-  const isTransition = requestCurrentTransition() !== NoTransition;
+  const isTransition = requestCurrentTransition() !== NoTransition; // startTransition会把 reactCurrentBatchConfig.transition设置为{};
   if (isTransition) {
     if (__DEV__ && ReactCurrentBatchConfig.transition !== null) {
       const transition = ReactCurrentBatchConfig.transition;
@@ -1578,7 +1578,7 @@ function handleError(root, thrownValue): void {
         }
       }
 
-      throwException(
+      throwException( // 处理错误
         root,
         erroredWork.return,
         erroredWork,
@@ -1730,7 +1730,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
       workLoopSync();
       break;
     } catch (thrownValue) {
-      handleError(root, thrownValue);
+      handleError(root, thrownValue); // suspense抛出的错误就在这儿处理。会抛出一个promise
     }
   } while (true);
   resetContextDependencies();
